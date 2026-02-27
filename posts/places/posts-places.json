@@ -1,0 +1,36 @@
+[
+  {
+    "city": "Amsterdam",
+    "vibe": "chill",
+    "title": "Hidden Coffee Gems",
+    "images": [
+      "images/places/amsterdam_coffee1.jpg",
+      "images/places/amsterdam_coffee2.jpg",
+      "images/places/amsterdam_coffee3.jpg"
+    ],
+    "description": "Ontdek de gezelligste koffietentjes buiten de drukte van het centrum.",
+    "coordinates": [52.3702, 4.8952]
+  },
+  {
+    "city": "Barcelona",
+    "vibe": "party",
+    "title": "Best Rooftop Bars",
+    "images": [
+      "images/places/barcelona_rooftop1.jpg",
+      "images/places/barcelona_rooftop2.jpg"
+    ],
+    "description": "De beste rooftop bars met uitzicht op de stad.",
+    "coordinates": [41.3851, 2.1734]
+  },
+  {
+    "city": "Paris",
+    "vibe": "artsy",
+    "title": "Hidden Art Galleries",
+    "images": [
+      "images/places/paris_art1.jpg",
+      "images/places/paris_art2.jpg"
+    ],
+    "description": "Ontdek de meest creatieve galerijen buiten de drukte.",
+    "coordinates": [48.8566, 2.3522]
+  }
+]
