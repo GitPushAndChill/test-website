@@ -195,6 +195,7 @@ body {
 }
 
 .modal-content {
+    position: relative;
     background: var(--bg-primary);
     color: var(--text-primary);
     max-width: 90vw;
@@ -255,6 +256,29 @@ body {
 }
 .image-slider .prev { left: 10px; }
 .image-slider .next { right: 10px; }
+
+.modal-footer-left,
+.modal-footer-right {
+    position: absolute;
+    bottom: var(--space-s);
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    z-index: 20;
+}
+.modal-footer-left { left: var(--space-m); }
+.modal-footer-right { right: var(--space-m); }
+
+.vibe-icon { font-size: 1.05rem; vertical-align: middle; margin-right: 6px; }
+
+@media (max-width: 600px) {
+    .modal-footer-left,
+    .modal-footer-right {
+        position: static;
+        display: block;
+        margin-top: var(--space-s);
+        text-align: center;
+    }
+}
 
 .full-text p {
     margin-bottom: var(--space-m);

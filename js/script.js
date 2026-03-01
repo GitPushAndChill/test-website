@@ -61,20 +61,29 @@ function populatePreviewGrid() {
 
                 const meta = document.createElement('time');
                 meta.className = 'meta';
-                meta.textContent = post.city;
+                // show city and place separated by a comma
+                meta.textContent = post.city + (post.place ? ', ' + post.place : '');
                 article.appendChild(meta);
 
                 const p = document.createElement('p');
                 p.className = 'excerpt';
-                p.textContent = post.description;
+                // show short_description in preview
+                p.textContent = post.short_description || post.description || '';
                 article.appendChild(p);
 
                 const full = document.createElement('div');
                 full.className = 'full-text';
                 full.hidden = true;
-                const fullp = document.createElement('p');
-                fullp.textContent = post.description;
-                full.appendChild(fullp);
+                // prepare full-text for modal: always include short_description, then description if different
+                const shortDesc = post.short_description || '';
+                const longDesc = post.description || '';
+                if (shortDesc && longDesc && shortDesc.trim() !== longDesc.trim()) {
+                    full.innerHTML = `<p class="short-desc">${shortDesc}</p><p class="long-desc">${longDesc}</p>`;
+                } else if (shortDesc) {
+                    full.innerHTML = `<p class="short-desc">${shortDesc}</p>`;
+                } else if (longDesc) {
+                    full.innerHTML = `<p class="long-desc">${longDesc}</p>`;
+                }
                 article.appendChild(full);
 
                 const btn = document.createElement('button');
@@ -197,6 +206,47 @@ function openModalWithCard(card) {
 
     modal.appendChild(closeBtn);
     modal.appendChild(clone);
+
+    // modal footer info: address (left) and vibe (right)
+    const addrText = post.adress || post.address || '';
+    if (addrText) {
+        const addrEl = document.createElement('div');
+        addrEl.className = 'modal-footer-left';
+        addrEl.textContent = addrText;
+        // place address inside the cloned card so it sits within the card border
+        clone.appendChild(addrEl);
+    }
+
+    if (post.vibe) {
+        const vibeEl = document.createElement('div');
+        vibeEl.className = 'modal-footer-right';
+        // include a small icon representing the vibe
+        const icon = document.createElement('span');
+        icon.className = 'vibe-icon';
+        icon.textContent = getVibeIcon(post.vibe);
+        icon.style.marginRight = '8px';
+        vibeEl.appendChild(icon);
+        const vibeText = document.createElement('span');
+        vibeText.textContent = post.vibe;
+        vibeEl.appendChild(vibeText);
+        // place inside the cloned card so it sits within the card border
+        clone.appendChild(vibeEl);
+    }
+function getVibeIcon(vibe) {
+    if (!vibe) return '';
+    const v = String(vibe).toLowerCase();
+    const map = {
+        'chill': '😎',
+        'cozy': '☕',
+        'energetic': '⚡',
+        'romantic': '💘',
+        'family': '👪',
+        'adventurous': '🧭',
+        'hipster': '🎩',
+        'party': '🎉',
+    };
+    return map[v] || '•';
+}
 
     // close when clicking outside content
     overlay.addEventListener('click', (evt) => {
