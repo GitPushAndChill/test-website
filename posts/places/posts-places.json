@@ -9,7 +9,9 @@
       "images/places/amsterdam_coffee3.jpg"
     ],
     "description": "Ontdek de gezelligste koffietentjes buiten de drukte van het centrum.",
-    "coordinates": [52.3702, 4.8952]
+    "coordinates": [52.3702, 4.8952],
+    "adress": "Kinkerstraat 123, 1053 DT Amsterdam",
+    "place": "Koffiehuis De Kinker"
   },
   {
     "city": "Barcelona",
@@ -20,7 +22,9 @@
       "images/places/barcelona_rooftop2.jpg"
     ],
     "description": "De beste rooftop bars met uitzicht op de stad.",
-    "coordinates": [41.3851, 2.1734]
+    "coordinates": [41.3851, 2.1734],
+    "adress": "Passeig de Gràcia 50, 08007 Barcelona",
+    "place": "Skyline Bar"
   },
   {
     "city": "Paris",
@@ -31,7 +35,9 @@
       "images/places/paris_art2.jpg"
     ],
     "description": "Ontdek de meest creatieve galerijen buiten de drukte.",
-    "coordinates": [48.8566, 2.3522]
+    "coordinates": [48.8566, 2.3522],
+    "adress": "Rue de Rivoli 12, 75001 Paris",
+    "place": "Galerie des Muses"
   },
   {
     "city": "Utrecht",
@@ -42,6 +48,8 @@
       "images/places/paris_art2.jpg"
     ],
     "description": "Ontdek de meest creatieve galerijen buiten de drukte.",
-    "coordinates": [52.091682, 5.120363]
+    "coordinates": [52.091682, 5.120363],
+    "adress": "Oudegracht 200, 3511 NE Utrecht",
+    "place": "Galerie Utrecht"
   }
 ]
