@@ -126,6 +126,40 @@ body {
     align-items: stretch; /* make grid items equal height */
 }
 
+/* Blog filters */
+.post-filters {
+    display: flex;
+    gap: var(--space-m);
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    padding: 0 0 var(--space-s) 0;
+}
+.filter-group {
+    flex: 1;
+    min-width: 0;
+}
+.filter-label {
+    display: block;
+    margin: 0 0 var(--space-xxs) 0;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.filter-input {
+    width: 100%;
+    border: 1px solid var(--text-secondary);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+.filter-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
 /* shared card styling for blog posts and reviews */
 .card,
 .review-card {

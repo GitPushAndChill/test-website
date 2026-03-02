@@ -35,11 +35,36 @@ let modalOpenCount = 0;
 // --- Refactored grid rendering logic ---
 let postsData = null; // cache for posts
 
-function populatePostGrid({ containerSelector, limit }) {
+function getSortedPosts() {
+    if (!Array.isArray(postsData)) return [];
+    return postsData
+        .slice()
+        .sort((a, b) => {
+            const aTime = Date.parse(a?.created_on || '') || 0;
+            const bTime = Date.parse(b?.created_on || '') || 0;
+            return bTime - aTime;
+        });
+}
+
+function populatePostGrid({ containerSelector, limit, cityFilter = '', vibeFilter = '' }) {
     const container = document.querySelector(containerSelector);
     if (!container || !postsData) return;
     container.innerHTML = '';
-    const posts = typeof limit === 'number' ? postsData.slice(0, limit) : postsData;
+
+    const cityNeedle = String(cityFilter || '').trim().toLowerCase();
+    const vibeNeedle = String(vibeFilter || '').trim().toLowerCase();
+
+    let posts = getSortedPosts();
+    if (cityNeedle) {
+        posts = posts.filter(p => String(p?.city || '').toLowerCase().includes(cityNeedle));
+    }
+    if (vibeNeedle) {
+        posts = posts.filter(p => String(p?.vibe || '').toLowerCase().includes(vibeNeedle));
+    }
+    if (typeof limit === 'number') {
+        posts = posts.slice(0, limit);
+    }
+
     posts.forEach(post => {
         const article = document.createElement('article');
         article.className = 'card';
@@ -83,6 +108,51 @@ function populatePostGrid({ containerSelector, limit }) {
     });
 }
 
+function initBlogFilters() {
+    const grid = document.querySelector('#all-posts-grid');
+    if (!grid) return;
+
+    const cityInput = document.querySelector('#city-filter');
+    const vibeInput = document.querySelector('#vibe-filter');
+    const cityOptions = document.querySelector('#city-options');
+    const vibeOptions = document.querySelector('#vibe-options');
+
+    if (!cityInput || !vibeInput || !cityOptions || !vibeOptions) {
+        // filters not present; just render the grid
+        populatePostGrid({ containerSelector: '#all-posts-grid' });
+        return;
+    }
+
+    const posts = getSortedPosts();
+    const cities = Array.from(new Set(posts.map(p => p?.city).filter(Boolean))).sort();
+    const vibes = Array.from(new Set(posts.map(p => p?.vibe).filter(Boolean))).sort();
+
+    cityOptions.innerHTML = cities.map(c => `<option value="${escapeHtmlAttr(c)}"></option>`).join('');
+    vibeOptions.innerHTML = vibes.map(v => `<option value="${escapeHtmlAttr(v)}"></option>`).join('');
+
+    const render = () => {
+        populatePostGrid({
+            containerSelector: '#all-posts-grid',
+            cityFilter: cityInput.value,
+            vibeFilter: vibeInput.value,
+        });
+        initArticleModal();
+    };
+
+    cityInput.addEventListener('input', render);
+    vibeInput.addEventListener('input', render);
+
+    render();
+}
+
+function escapeHtmlAttr(value) {
+    return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('"', '&quot;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+}
+
 function fetchAndRenderGrids() {
     fetch('posts/places/posts-places.json')
         .then(r => r.json())
@@ -94,8 +164,9 @@ function fetchAndRenderGrids() {
             }
             // Detect and render all-posts grid (blog.html)
             if (document.querySelector('#all-posts-grid')) {
-                populatePostGrid({ containerSelector: '#all-posts-grid' });
+                initBlogFilters();
             }
+            // ensure modal wiring is applied after initial render
             initArticleModal();
         })
         .catch(err => {
@@ -120,6 +191,9 @@ function initArticleModal() {
     }
 
     readButtons.forEach(btn => {
+        if (btn.dataset.modalBound === '1') return;
+        btn.dataset.modalBound = '1';
+
         btn.addEventListener('click', (e) => {
             log('Read button clicked', 'color: purple;');
 
