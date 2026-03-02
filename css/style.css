@@ -308,7 +308,41 @@ body {
 .card-title { margin: 0 0 var(--space-xs) 0; font-size: 1.1rem; }
 .meta { display:block; color: var(--text-secondary); font-size:0.9rem; margin-bottom: var(--space-xs); }
 .excerpt { margin: 0 0 var(--space-s) 0; color: var(--text-primary); }
-.btn { display:inline-block; text-decoration:none; background:var(--accent); color:var(--bg-primary); padding:8px 14px; border-radius:6px; font-weight:600; }
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: var(--accent);
+    color: var(--bg-primary);
+    border: 1px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-weight: 700;
+    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+@supports (background: color-mix(in srgb, red, blue)) {
+    .btn:hover {
+        background: color-mix(in srgb, var(--accent) 88%, var(--text-secondary));
+        border-color: color-mix(in srgb, var(--accent) 88%, var(--text-secondary));
+    }
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+@supports not (background: color-mix(in srgb, red, blue)) {
+    .btn:focus-visible {
+        box-shadow: 0 0 0 3px var(--accent);
+    }
+}
 
 /* ensure read button sits bottom-left of its card/review */
 .read-btn {
