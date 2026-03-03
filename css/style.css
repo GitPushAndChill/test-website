@@ -1,11 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
 :root {
-    /* Palette extracted from provided image */
-    --color-primary-1: #1b2425;  /* bijna zwart teal */
-    --color-primary-2: #3c5e57;  
-    --color-primary-3: #a3b86c;  
-    --color-primary-4: #f4f0d6;  
-    --color-primary-5: #d17b49;  /* levendiger accent */
-    --color-highlight: #e8c547; /* optioneel: mustard highlight */
+    /* Base palette (kept, slightly richer) */
+    --color-primary-1: #243233;  /* dark charcoal/teal */
+    --color-primary-2: #33564f;  /* deep green */
+    --color-primary-3: #a8b76e;  /* sage */
+    --color-primary-4: #f6f1cc;  /* pale cream */
+    --color-primary-5: #b78e6f;  /* warm tan accent */
+    --color-highlight: #e8c547;
 
     /* Semantic roles (mapped strictly to palette) */
     --bg-primary: var(--color-primary-4);
@@ -14,6 +16,22 @@
     --text-primary: var(--color-primary-1);
     --text-secondary: var(--color-primary-2);
 
+    /* Typography */
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-heading: 'Playfair Display', ui-serif, Georgia, 'Times New Roman', serif;
+
+    /* Radius & motion */
+    --radius: 10px;
+    --radius-lg: 14px;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --t-fast: 180ms;
+    --t: 360ms;
+
+    /* Shadow system */
+    --shadow-sm: 0 6px 18px rgba(36, 50, 51, 0.10);
+    --shadow-md: 0 14px 34px rgba(36, 50, 51, 0.14);
+    --shadow-ring: 0 0 0 3px rgba(183, 142, 111, 0.32);
+
     /* Layout system */
     --container-width: 1100px;
     --space-xxs: 6px;
@@ -21,42 +39,75 @@
     --space-s: 16px;
     --space-m: 24px;
     --space-l: 40px;
-    --radius: 8px;
     --max-width: 1100px;
     --type-scale-ratio: 1.25;
 
     /* logo/header sizing */
     /* visible logo size; header will size slightly larger automatically */
-    --logo-height: 90px;
+    --logo-height: 86px;
     --header-vertical-padding: calc(var(--logo-height) * 0.1); /* slight breathing room */
 }
 
 /* Global reset and base */
 * { box-sizing: border-box; }
 html,body { height: 100%; }
+html { scroll-behavior: smooth; }
 body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    font-family: var(--font-body);
     background: var(--bg-primary);
     color: var(--text-primary);
     -webkit-font-smoothing:antialiased;
     -moz-osx-font-smoothing:grayscale;
+    line-height: 1.6;
+    animation: pageIn 520ms var(--ease-out) both;
+}
+
+@keyframes pageIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@supports (background: radial-gradient(circle at 10% 10%, red, blue)) {
+    body {
+        background:
+            radial-gradient(1000px circle at 8% -12%, color-mix(in srgb, var(--bg-secondary) 45%, var(--bg-primary)), transparent 60%),
+            radial-gradient(900px circle at 92% 8%, color-mix(in srgb, var(--accent) 22%, var(--bg-primary)), transparent 55%),
+            var(--bg-primary);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    body { animation: none; }
+    * { transition: none !important; }
 }
 
 .container {
     width: calc(100% - 32px);
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: var(--space-l) 5px;
+    padding: calc(var(--space-l) + 6px) 0;
 }
 
 /* Header / Nav */
 .site-header {
-    background: var(--bg-secondary);
+    background: color-mix(in srgb, var(--bg-secondary) 70%, var(--bg-primary));
     color: var(--text-primary);
     border-bottom: 1px solid var(--text-secondary);
     /* let header size to its contents and padding rather than a fixed height */
     padding: var(--header-vertical-padding) 0; /* slight padding around logo */
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+@supports ((-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))) {
+    .site-header {
+        background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+    }
 }
 
 /* remove top/bottom padding from container inside header so green shows through */
@@ -100,6 +151,21 @@ body {
     border-radius: var(--radius);
     font-weight:600;
     font-size: 0.95rem;
+    position: relative;
+    transition: color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
+}
+.main-nav a::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 9px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--t-fast) var(--ease-out);
 }
 .main-nav a.active {
     background: var(--accent);
@@ -108,12 +174,22 @@ body {
 .main-nav a:focus,
 .main-nav a:hover {
     outline: none;
-    background: rgba(0,0,0,0.04);
+    background: color-mix(in srgb, var(--bg-primary) 92%, var(--bg-secondary));
+}
+
+.main-nav a:hover::after,
+.main-nav a:focus-visible::after {
+    transform: scaleX(1);
+}
+
+.main-nav a:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-ring);
 }
 
 /* Hero */
 .hero { padding: var(--space-l) 0; text-align:center; }
-.hero-title { margin: 0 0 var(--space-xs) 0; font-size: 2.1rem; }
+.hero-title { margin: 0 0 var(--space-xs) 0; font-size: 2.35rem; font-family: var(--font-heading); letter-spacing: 0.01em; }
 .hero-sub { margin: 0; color: var(--text-secondary); }
 
 /* Cards and previews */
@@ -207,8 +283,9 @@ body {
     padding: var(--space-s);
     margin: 0 0 var(--space-s) 0;
     border: 1px solid var(--text-secondary);
-    border-radius: calc(var(--radius) + 6px);
-    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--bg-primary) 92%, var(--bg-secondary));
+    box-shadow: var(--shadow-sm);
 }
 @supports (background: color-mix(in srgb, red, blue)) {
     .post-filters {
@@ -242,18 +319,31 @@ body {
 }
 .filter-select {
     width: 100%;
-    border: 1px solid var(--text-secondary);
+    border: 1px solid color-mix(in srgb, var(--text-secondary) 72%, var(--bg-primary));
     border-radius: var(--radius);
     padding: 12px 14px;
-    background: var(--bg-primary);
+    padding-right: 44px; /* room for custom arrow */
+    background: color-mix(in srgb, var(--bg-primary) 86%, var(--bg-secondary));
     color: var(--text-primary);
     font-size: 1.05rem;
     font-weight: 700;
     display: block;
     min-height: 44px;
     cursor: pointer;
-    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    transition: border-color var(--t) var(--ease-out), box-shadow var(--t) var(--ease-out), transform var(--t-fast) var(--ease-out);
     letter-spacing: 0.01em;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+        linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 55%,
+        calc(100% - 12px) 55%;
+    background-size:
+        6px 6px,
+        6px 6px;
+    background-repeat: no-repeat;
 }
 
 @supports (background: color-mix(in srgb, red, blue)) {
@@ -268,7 +358,7 @@ body {
 .filter-select:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow: var(--shadow-ring);
 }
 
 @supports not (background: color-mix(in srgb, red, blue)) {
@@ -293,31 +383,32 @@ body {
 /* shared card styling for blog posts and reviews */
 .card,
 .review-card {
-    background: var(--bg-primary);
-    border: 1px solid var(--text-secondary);
+    background: color-mix(in srgb, var(--bg-primary) 90%, white);
+    border: 1px solid color-mix(in srgb, var(--text-secondary) 60%, var(--bg-primary));
     padding: var(--space-m);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     position: relative; /* for absolute placement of button */
     padding-bottom: calc(var(--space-m) * 2.6); /* extra room for button + vibe badge */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     min-height: 220px; /* ensure consistent box size across pages */
-    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--t) var(--ease-out), border-color var(--t) var(--ease-out), box-shadow var(--t) var(--ease-out);
 }
 
 .card:hover,
 .review-card:hover {
     transform: translateY(-4px);
     border-color: var(--accent);
-    box-shadow: 0 10px 22px color-mix(in srgb, var(--text-secondary) 22%, transparent);
+    box-shadow: var(--shadow-md);
 }
 
 .card:focus-within,
 .review-card:focus-within {
     transform: translateY(-3px);
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow: var(--shadow-ring), var(--shadow-md);
 }
 
 @supports not (background: color-mix(in srgb, red, blue)) {
@@ -332,24 +423,33 @@ body {
 }
 
 .card-title { margin: 0 0 var(--space-xs) 0; font-size: 1.1rem; }
+.card-title { font-family: var(--font-heading); letter-spacing: 0.01em; }
 .meta { display:block; color: var(--text-secondary); font-size:0.9rem; margin-bottom: var(--space-xs); }
 .excerpt { margin: 0 0 var(--space-s) 0; color: var(--text-primary); }
-.btn {
+
+/* Buttons (shared) */
+.btn,
+.vibe-action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 78%, var(--text-secondary)));
     color: var(--bg-primary);
-    border: 1px solid var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 85%, var(--text-secondary));
     padding: 10px 14px;
-    border-radius: 6px;
+    border-radius: var(--radius-lg);
     font-weight: 700;
-    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    letter-spacing: 0.01em;
+    box-shadow: 0 10px 24px rgba(183, 142, 111, 0.18);
+    transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t) var(--ease-out), filter var(--t) var(--ease-out);
 }
 
-.btn:hover {
+.btn:hover,
+.vibe-action-btn:hover {
     transform: translateY(-2px);
+    box-shadow: 0 16px 34px rgba(183, 142, 111, 0.22);
+    filter: saturate(1.05);
 }
 
 @supports (background: color-mix(in srgb, red, blue)) {
@@ -359,9 +459,10 @@ body {
     }
 }
 
-.btn:focus-visible {
+.btn:focus-visible,
+.vibe-action-btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow: var(--shadow-ring), 0 16px 34px rgba(183, 142, 111, 0.18);
 }
 
 @supports not (background: color-mix(in srgb, red, blue)) {
@@ -389,13 +490,14 @@ body {
     gap: 8px;
     padding: 7px 10px;
     border-radius: var(--radius);
-    border: 1px solid var(--text-secondary);
-    background: var(--bg-primary);
+    border: 1px solid color-mix(in srgb, var(--text-secondary) 60%, var(--bg-primary));
+    background: color-mix(in srgb, var(--bg-primary) 88%, var(--bg-secondary));
     color: var(--text-primary);
     font-weight: 600;
     font-size: 0.95rem;
     line-height: 1;
     user-select: none;
+    box-shadow: 0 10px 22px rgba(36, 50, 51, 0.10);
 }
 
 @supports (background: color-mix(in srgb, red, blue)) {
@@ -445,15 +547,42 @@ body {
 }
 
 /* Footer */
-.site-footer { padding: var(--space-s) 0; text-align:center; color:var(--text-secondary); border-top:1px solid var(--text-secondary); background:transparent; }
+.site-footer {
+    position: relative;
+    padding: var(--space-m) 0;
+    text-align: center;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+}
+
+.site-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(51, 86, 79, 0.35), transparent);
+}
+
+@supports (background: color-mix(in srgb, red, blue)) {
+    .site-footer {
+        background: color-mix(in srgb, var(--bg-primary) 92%, var(--bg-secondary));
+    }
+    .site-footer::before {
+        background: linear-gradient(
+            90deg,
+            transparent,
+            color-mix(in srgb, var(--text-secondary) 60%, transparent),
+            transparent
+        );
+    }
+}
 
 /* Article expansion/modal */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
@@ -463,14 +592,15 @@ body {
 
 .modal-content {
     position: relative;
-    background: var(--bg-primary);
+    background: color-mix(in srgb, var(--bg-primary) 92%, white);
     color: var(--text-primary);
     max-width: 90vw;
     max-height: 90vh;
     overflow-y: auto;
     padding: var(--space-l);
-    border-radius: var(--radius);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--text-secondary) 50%, var(--bg-primary));
+    box-shadow: var(--shadow-md);
 }
 
 /* make sure full-text shows when a card is expanded inline (fallback) */
@@ -558,27 +688,27 @@ body {
 }
 
 @media (max-width: 600px) {
+    :root {
+        --logo-height: 70px;
+    }
+
     .post-filters { gap: var(--space-s); }
 
-    .nav-wrap { gap: var(--space-s); }
     .nav-wrap {
+        gap: var(--space-s);
         flex-direction: column;
         align-items: center;
     }
     .main-nav {
-        display: flex;
+        display:flex;
         gap: 8px;
         justify-content: center;
         width: 100%;
         padding: 8px;
-        border: 1px solid var(--text-secondary);
-        border-radius: calc(var(--radius) + 6px);
-        background: var(--bg-primary);
-    }
-    @supports (background: color-mix(in srgb, red, blue)) {
-        .main-nav {
-            background: color-mix(in srgb, var(--bg-primary) 86%, var(--bg-secondary));
-        }
+        border: 1px solid color-mix(in srgb, var(--text-secondary) 70%, var(--bg-primary));
+        border-radius: var(--radius-lg);
+        background: color-mix(in srgb, var(--bg-primary) 90%, var(--bg-secondary));
+        box-shadow: var(--shadow-sm);
     }
     .preview-grid { grid-template-columns: 1fr; }
     .reviews-grid { grid-template-columns: 1fr; }
