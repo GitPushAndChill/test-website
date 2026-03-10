@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="content-language" content="en" />
     <meta name="language" content="English" />
+    <link rel="icon" type="image/png" href="images/logo.png" />
+    <link rel="apple-touch-icon" href="images/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
@@ -13,6 +15,8 @@
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
     <title>Vibes Finder — Find the best vibes and places in the Netherlands</title>
     <meta name="description" content="Discover the best places and vibes in the Netherlands: Amsterdam, Rotterdam, Utrecht, The Hague (Den Haag) and more. Ontdek de beste plekken en vibes in Nederland, van gezellige cafés en nightlife tot hidden gems per stad." />
@@ -88,6 +92,7 @@
     <!-- JS Libraries -->
     <script src="js/script.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
         <script>
         Promise.resolve(window.vibeConfigReady)
@@ -102,28 +107,17 @@
                             attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
                         }).addTo(map);
 
-                        const groupedByCoordinate = {};
-                        posts.forEach((post) => {
-                            const key = `${Number(post.coordinates?.[0] || 0).toFixed(5)}|${Number(post.coordinates?.[1] || 0).toFixed(5)}`;
-                            if (!groupedByCoordinate[key]) groupedByCoordinate[key] = [];
-                            groupedByCoordinate[key].push(post);
+                        const markerCluster = L.markerClusterGroup({
+                            showCoverageOnHover: false,
+                            spiderfyOnMaxZoom: true,
+                            disableClusteringAtZoom: 14,
+                            maxClusterRadius: 50,
                         });
 
-                        const applyMarkerOffset = (baseLat, baseLng, indexInGroup, groupSize) => {
-                            if (groupSize <= 1) return [baseLat, baseLng];
-                            const angle = (Math.PI * 2 * indexInGroup) / groupSize;
-                            const radius = 0.0012;
-                            return [
-                                baseLat + Math.sin(angle) * radius,
-                                baseLng + Math.cos(angle) * radius,
-                            ];
-                        };
-
                         posts.forEach(post => {
-                                const key = `${Number(post.coordinates?.[0] || 0).toFixed(5)}|${Number(post.coordinates?.[1] || 0).toFixed(5)}`;
-                                const group = groupedByCoordinate[key] || [post];
-                                const indexInGroup = group.indexOf(post);
-                                const [lat, lng] = applyMarkerOffset(post.coordinates[0], post.coordinates[1], indexInGroup, group.length);
+                                const lat = Number(post.coordinates?.[0]);
+                                const lng = Number(post.coordinates?.[1]);
+                                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
                                 const postVibes = typeof getPostVibes === 'function' ? getPostVibes(post) : [];
                                 const markerVibes = postVibes.length
@@ -159,7 +153,6 @@
                                 `;
 
                                 const marker = L.marker([lat, lng], { icon: emojiIcon })
-                                .addTo(map)
                                 .bindPopup(popupHtml, { className: 'vibe-map-popup' });
 
                                 marker.on('popupopen', (event) => {
@@ -198,7 +191,11 @@
                                         });
                                     }
                                 });
+
+                                markerCluster.addLayer(marker);
                         });
+
+                            map.addLayer(markerCluster);
                     });
             });
         </script>
