@@ -101,6 +101,12 @@ function getPostPrimaryVibe(post) {
     return getPostVibes(post)[0] || '';
 }
 
+function getPostDisplayTitle(post) {
+    const place = String(post?.place || '').trim();
+    if (place) return place;
+    return String(post?.title || '').trim();
+}
+
 function parseVibesYaml(yamlText) {
     const definitions = {};
     const lines = String(yamlText || '').split(/\r?\n/);
@@ -211,11 +217,7 @@ function getSortedPosts() {
         });
 }
 
-function populatePostGrid({ containerSelector, limit, cityFilter = '', vibeFilter = '' }) {
-    const container = document.querySelector(containerSelector);
-    if (!container || !postsData) return;
-    container.innerHTML = '';
-
+function getFilteredPosts({ cityFilter = '', vibeFilter = '' } = {}) {
     const cityNeedle = String(cityFilter || '').trim().toLowerCase();
     const vibeNeedle = String(vibeFilter || '').trim().toLowerCase();
 
@@ -232,8 +234,23 @@ function populatePostGrid({ containerSelector, limit, cityFilter = '', vibeFilte
             });
         });
     }
+
+    return posts;
+}
+
+function populatePostGrid({ containerSelector, limit, offset = 0, cityFilter = '', vibeFilter = '' }) {
+    const container = document.querySelector(containerSelector);
+    if (!container || !postsData) return { totalPosts: 0, renderedPosts: 0 };
+    container.innerHTML = '';
+
+    let posts = getFilteredPosts({ cityFilter, vibeFilter });
+    const totalPosts = posts.length;
+    const safeOffset = Math.max(0, Number(offset) || 0);
+
     if (typeof limit === 'number') {
-        posts = posts.slice(0, limit);
+        posts = posts.slice(safeOffset, safeOffset + limit);
+    } else if (safeOffset > 0) {
+        posts = posts.slice(safeOffset);
     }
 
     posts.forEach(post => {
@@ -243,12 +260,12 @@ function populatePostGrid({ containerSelector, limit, cityFilter = '', vibeFilte
 
         const h2 = document.createElement('h2');
         h2.className = 'card-title';
-        h2.textContent = post.title;
+        h2.textContent = getPostDisplayTitle(post);
         article.appendChild(h2);
 
         const meta = document.createElement('time');
         meta.className = 'meta';
-        meta.textContent = post.city + (post.place ? ', ' + post.place : '');
+        meta.textContent = post.city || '';
         article.appendChild(meta);
 
         const p = document.createElement('p');
@@ -295,6 +312,8 @@ function populatePostGrid({ containerSelector, limit, cityFilter = '', vibeFilte
 
         container.appendChild(article);
     });
+
+    return { totalPosts, renderedPosts: posts.length };
 }
 
 function getVibeIcon(vibe) {
@@ -315,6 +334,8 @@ function getVibeLabel(vibe) {
 function initBlogFilters() {
     const grid = document.querySelector('#all-posts-grid');
     if (!grid) return;
+    const pageSize = 12;
+    let currentPage = 1;
 
     initBlogVibeGuide();
 
@@ -325,9 +346,66 @@ function initBlogFilters() {
     const cityOptions = document.querySelector('#city-options');
     const vibeOptions = document.querySelector('#vibe-options');
 
+    let paginationNav = document.querySelector('#posts-pagination');
+    if (!paginationNav) {
+        paginationNav = document.createElement('nav');
+        paginationNav.id = 'posts-pagination';
+        paginationNav.className = 'post-pagination';
+        paginationNav.setAttribute('aria-label', 'Post pagination');
+        paginationNav.innerHTML = `
+            <button type="button" class="btn post-pagination-btn" id="posts-prev-page">← Previous</button>
+            <span class="post-pagination-status" id="posts-pagination-status" aria-live="polite"></span>
+            <button type="button" class="btn post-pagination-btn" id="posts-next-page">Next →</button>
+        `;
+        grid.insertAdjacentElement('afterend', paginationNav);
+    }
+
+    const prevPageBtn = paginationNav.querySelector('#posts-prev-page');
+    const nextPageBtn = paginationNav.querySelector('#posts-next-page');
+    const paginationStatus = paginationNav.querySelector('#posts-pagination-status');
+
     if (!cityInput || !vibeInput || !cityOptions || !vibeOptions) {
         // filters not present; just render the grid
-        populatePostGrid({ containerSelector: '#all-posts-grid' });
+        const totalPosts = getSortedPosts().length;
+        const totalPages = Math.max(1, Math.ceil(totalPosts / pageSize));
+        const pageOffset = (currentPage - 1) * pageSize;
+        populatePostGrid({ containerSelector: '#all-posts-grid', limit: pageSize, offset: pageOffset });
+
+        if (paginationStatus) {
+            paginationStatus.textContent = totalPosts ? `Page ${currentPage} of ${totalPages}` : 'No posts found';
+        }
+        if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+
+        if (prevPageBtn && prevPageBtn.dataset.bound !== '1') {
+            prevPageBtn.dataset.bound = '1';
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage <= 1) return;
+                currentPage -= 1;
+                const offset = (currentPage - 1) * pageSize;
+                populatePostGrid({ containerSelector: '#all-posts-grid', limit: pageSize, offset });
+                if (paginationStatus) paginationStatus.textContent = `Page ${currentPage} of ${totalPages}`;
+                prevPageBtn.disabled = currentPage <= 1;
+                if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+                initArticleModal();
+            });
+        }
+
+        if (nextPageBtn && nextPageBtn.dataset.bound !== '1') {
+            nextPageBtn.dataset.bound = '1';
+            nextPageBtn.addEventListener('click', () => {
+                if (currentPage >= totalPages) return;
+                currentPage += 1;
+                const offset = (currentPage - 1) * pageSize;
+                populatePostGrid({ containerSelector: '#all-posts-grid', limit: pageSize, offset });
+                if (paginationStatus) paginationStatus.textContent = `Page ${currentPage} of ${totalPages}`;
+                nextPageBtn.disabled = currentPage >= totalPages;
+                if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+                initArticleModal();
+            });
+        }
+
+        initArticleModal();
         return;
     }
 
@@ -392,32 +470,77 @@ function initBlogFilters() {
     };
 
     const render = () => {
+        const cityFilter = getActiveValue(cityInput, citySelect);
+        const vibeFilter = getActiveValue(vibeInput, vibeSelect);
+        const totalPosts = getFilteredPosts({ cityFilter, vibeFilter }).length;
+        const totalPages = Math.max(1, Math.ceil(totalPosts / pageSize));
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        const pageOffset = (currentPage - 1) * pageSize;
         populatePostGrid({
             containerSelector: '#all-posts-grid',
-            cityFilter: getActiveValue(cityInput, citySelect),
-            vibeFilter: getActiveValue(vibeInput, vibeSelect),
+            limit: pageSize,
+            offset: pageOffset,
+            cityFilter,
+            vibeFilter,
         });
+
+        if (paginationStatus) {
+            paginationStatus.textContent = totalPosts ? `Page ${currentPage} of ${totalPages}` : 'No posts found';
+        }
+        if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+
         initArticleModal();
+    };
+
+    const renderFromFirstPage = () => {
+        currentPage = 1;
+        render();
     };
 
     cityInput.addEventListener('input', () => {
         syncSelectToInput(cityInput, citySelect);
-        render();
+        renderFromFirstPage();
     });
     vibeInput.addEventListener('input', () => {
         syncSelectToInput(vibeInput, vibeSelect);
-        render();
+        renderFromFirstPage();
     });
 
     if (citySelect) {
         citySelect.addEventListener('change', () => {
             syncInputToSelect(cityInput, citySelect);
-            render();
+            renderFromFirstPage();
         });
     }
     if (vibeSelect) {
         vibeSelect.addEventListener('change', () => {
             syncInputToSelect(vibeInput, vibeSelect);
+            renderFromFirstPage();
+        });
+    }
+
+    if (prevPageBtn && prevPageBtn.dataset.bound !== '1') {
+        prevPageBtn.dataset.bound = '1';
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage <= 1) return;
+            currentPage -= 1;
+            render();
+        });
+    }
+
+    if (nextPageBtn && nextPageBtn.dataset.bound !== '1') {
+        nextPageBtn.dataset.bound = '1';
+        nextPageBtn.addEventListener('click', () => {
+            const cityFilter = getActiveValue(cityInput, citySelect);
+            const vibeFilter = getActiveValue(vibeInput, vibeSelect);
+            const totalPosts = getFilteredPosts({ cityFilter, vibeFilter }).length;
+            const totalPages = Math.max(1, Math.ceil(totalPosts / pageSize));
+            if (currentPage >= totalPages) return;
+            currentPage += 1;
             render();
         });
     }
@@ -547,12 +670,12 @@ function buildPostCardForModal(post) {
 
     const h2 = document.createElement('h2');
     h2.className = 'card-title';
-    h2.textContent = post.title || '';
+    h2.textContent = getPostDisplayTitle(post);
     article.appendChild(h2);
 
     const meta = document.createElement('time');
     meta.className = 'meta';
-    meta.textContent = (post.city || '') + (post.place ? ', ' + post.place : '');
+    meta.textContent = post.city || '';
     article.appendChild(meta);
 
     const p = document.createElement('p');
@@ -804,13 +927,13 @@ function openModalWithCard(card) {
         prevBtn.type = 'button';
         prevBtn.className = 'btn modal-nav-btn';
         prevBtn.textContent = '← Previous article';
-        prevBtn.setAttribute('aria-label', `Open previous article: ${prevPost?.title || ''}`);
+        prevBtn.setAttribute('aria-label', `Open previous article: ${getPostDisplayTitle(prevPost)}`);
 
         const nextBtn = document.createElement('button');
         nextBtn.type = 'button';
         nextBtn.className = 'btn modal-nav-btn';
         nextBtn.textContent = 'Next article →';
-        nextBtn.setAttribute('aria-label', `Open next article: ${nextPost?.title || ''}`);
+        nextBtn.setAttribute('aria-label', `Open next article: ${getPostDisplayTitle(nextPost)}`);
 
         const openTargetPost = (targetPost) => {
             if (document.body.contains(overlay)) {
