@@ -1,0 +1,186 @@
+const GMAIL_FORWARDER_CONFIG = {
+  sourceLabel: 'vibesfinder/import',
+  processedLabel: 'vibesfinder/imported',
+  failedLabel: 'vibesfinder/import-failed',
+  githubOwner: 'GitPushAndChill',
+  githubRepo: 'test-website',
+  eventType: 'gmail_forwarded_email',
+  maxImageAttachments: 3,
+  maxThreadsPerRun: 10,
+};
+
+function forwardLabeledGmailPostsToGitHub() {
+  const config = GMAIL_FORWARDER_CONFIG;
+  const githubToken = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  const startedAt = new Date();
+
+  if (!githubToken) {
+    throw new Error('Missing GITHUB_TOKEN in Script Properties.');
+  }
+
+  const sourceLabel = getOrCreateLabel_(config.sourceLabel);
+  const processedLabel = getOrCreateLabel_(config.processedLabel);
+  const failedLabel = getOrCreateLabel_(config.failedLabel);
+  const threads = sourceLabel.getThreads(0, config.maxThreadsPerRun);
+
+  const stats = {
+    threadsSeen: threads.length,
+    processed: 0,
+    skippedAlreadyProcessed: 0,
+    failed: 0,
+    attachmentsForwarded: 0,
+  };
+
+  Logger.log(
+    '[gmail-forwarder] Run started at %s. threadsSeen=%s label=%s',
+    startedAt.toISOString(),
+    stats.threadsSeen,
+    config.sourceLabel
+  );
+
+  threads.forEach((thread) => {
+    if (thread.hasLabel(processedLabel)) {
+      stats.skippedAlreadyProcessed += 1;
+      return;
+    }
+
+    const message = thread.getMessages().pop();
+    const subject = message ? message.getSubject() : '(no subject)';
+
+    try {
+      const payload = buildRepositoryDispatchPayload_(message, config);
+      const attachmentCount = payload.client_payload.email.attachments.length;
+      sendRepositoryDispatch_(payload, githubToken, config);
+
+      stats.processed += 1;
+      stats.attachmentsForwarded += attachmentCount;
+
+      thread.addLabel(processedLabel);
+      thread.removeLabel(failedLabel);
+      thread.markRead();
+
+      Logger.log(
+        '[gmail-forwarder] Dispatched subject="%s" attachments=%s',
+        subject,
+        attachmentCount
+      );
+    } catch (err) {
+      stats.failed += 1;
+      thread.addLabel(failedLabel);
+
+      Logger.log(
+        '[gmail-forwarder] Failed subject="%s" error=%s',
+        subject,
+        err && err.message ? err.message : String(err)
+      );
+    }
+  });
+
+  const endedAt = new Date();
+  const durationMs = endedAt.getTime() - startedAt.getTime();
+  Logger.log(
+    '[gmail-forwarder] Run finished at %s. processed=%s skippedAlreadyProcessed=%s failed=%s attachmentsForwarded=%s durationMs=%s',
+    endedAt.toISOString(),
+    stats.processed,
+    stats.skippedAlreadyProcessed,
+    stats.failed,
+    stats.attachmentsForwarded,
+    durationMs
+  );
+}
+
+function buildRepositoryDispatchPayload_(message, config) {
+  const plainBody = message.getPlainBody() || '';
+  const htmlBody = message.getBody() || '';
+  const attachments = message
+    .getAttachments({ includeInlineImages: false, includeAttachments: true })
+    .filter(isImageAttachment_)
+    .slice(0, config.maxImageAttachments)
+    .map((attachment) => toWebhookAttachment_(attachment));
+
+  const googleMapsUrl = findGoogleMapsUrl_(plainBody, htmlBody);
+
+  return {
+    event_type: config.eventType,
+    client_payload: {
+      email: {
+        subject: message.getSubject() || '',
+        from: message.getFrom() || '',
+        text: plainBody,
+        html: htmlBody,
+        attachments: attachments,
+      },
+      google_maps_url: googleMapsUrl,
+      place: '',
+      city: '',
+    },
+  };
+}
+
+function sendRepositoryDispatch_(payload, githubToken, config) {
+  const url = `https://api.github.com/repos/${config.githubOwner}/${config.githubRepo}/dispatches`;
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    muteHttpExceptions: true,
+    contentType: 'application/json',
+    headers: {
+      Authorization: `Bearer ${githubToken}`,
+      Accept: 'application/vnd.github+json',
+    },
+    payload: JSON.stringify(payload),
+  });
+
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) {
+    throw new Error(`GitHub dispatch failed (${status}): ${response.getContentText()}`);
+  }
+}
+
+function isImageAttachment_(attachment) {
+  const contentType = String(attachment.getContentType() || '').toLowerCase();
+  const name = String(attachment.getName() || '').toLowerCase();
+  return contentType.indexOf('image/') === 0 || /\.(jpg|jpeg|png|webp|heic|heif)$/i.test(name);
+}
+
+function toWebhookAttachment_(attachment) {
+  const bytes = attachment.copyBlob().getBytes();
+  return {
+    filename: attachment.getName(),
+    contentType: attachment.getContentType(),
+    contentBase64: Utilities.base64Encode(bytes),
+  };
+}
+
+function findGoogleMapsUrl_(plainBody, htmlBody) {
+  const body = `${plainBody || ''}\n${stripHtml_(htmlBody || '')}`;
+  const match = body.match(/https?:\/\/(?:www\.)?(?:google\.[^\s/]+\/maps|maps\.app\.goo\.gl)\S+/i);
+  if (!match) {
+    throw new Error('No Google Maps URL found in Gmail message body.');
+  }
+  return match[0];
+}
+
+function stripHtml_(html) {
+  return String(html || '')
+    .replace(/<br\s*\/?>(\s*)/gi, '\n')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getOrCreateLabel_(name) {
+  const existing = GmailApp.getUserLabelByName(name);
+  return existing || GmailApp.createLabel(name);
+}
+
+function testForwardLatestMatchingEmail() {
+  const sourceLabel = getOrCreateLabel_(GMAIL_FORWARDER_CONFIG.sourceLabel);
+  const threads = sourceLabel.getThreads(0, 1);
+  if (!threads.length) {
+    throw new Error(`No threads found for label ${GMAIL_FORWARDER_CONFIG.sourceLabel}`);
+  }
+
+  const message = threads[0].getMessages().pop();
+  const payload = buildRepositoryDispatchPayload_(message, GMAIL_FORWARDER_CONFIG);
+  Logger.log(JSON.stringify(payload, null, 2));
+}
