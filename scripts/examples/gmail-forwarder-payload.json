@@ -1,0 +1,23 @@
+{
+  "email": {
+    "subject": "New place submission: Pluk Amsterdam",
+    "from": "forwarder@example.com",
+    "text": "Hey! Please add this place. Great brunch vibes and cute coffee corner. Google Maps: https://www.google.com/maps/place/Pluk+Amsterdam/@52.37408,4.88354,17z",
+    "html": "<p>Hey! Please add this place.</p><p>Great brunch vibes and cute coffee corner.</p><p>Google Maps: <a href=\"https://www.google.com/maps/place/Pluk+Amsterdam/@52.37408,4.88354,17z\">Open map</a></p>",
+    "attachments": [
+      {
+        "filename": "pluk-front.jpg",
+        "contentType": "image/jpeg",
+        "url": "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=1800&q=80"
+      },
+      {
+        "filename": "pluk-brunch.jpg",
+        "contentType": "image/jpeg",
+        "url": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=1800&q=80"
+      }
+    ]
+  },
+  "google_maps_url": "https://www.google.com/maps/place/Pluk+Amsterdam/@52.37408,4.88354,17z",
+  "place": "Pluk Amsterdam",
+  "city": "Amsterdam"
+}
