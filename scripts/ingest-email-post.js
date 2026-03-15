@@ -8,7 +8,7 @@ const POST_INSTRUCTIONS_PATH = path.join(ROOT, 'posts', 'posts_instructions.md')
 const IMAGES_DIR = path.join(ROOT, 'images', 'places');
 
 const MODELS_ENDPOINT = process.env.GITHUB_MODELS_ENDPOINT || 'https://models.inference.ai.azure.com/chat/completions';
-const MODELS_TOKEN = process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN || '';
+const MODELS_TOKEN = process.env.MODELS_TOKEN || process.env.GITHUB_TOKEN || '';
 const COPILOT_MODEL = process.env.COPILOT_MODEL || 'openai/gpt-4.1-mini';
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 

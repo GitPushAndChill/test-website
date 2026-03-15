@@ -1,5 +1,6 @@
 const GMAIL_FORWARDER_CONFIG = {
   sourceLabel: 'vibesfinder/import',
+  subjectMustContain: 'vibesfinder/import',
   processedLabel: 'vibesfinder/imported',
   failedLabel: 'vibesfinder/import-failed',
   githubOwner: 'GitPushAndChill',
@@ -25,6 +26,7 @@ function forwardLabeledGmailPostsToGitHub() {
 
   const stats = {
     threadsSeen: threads.length,
+    skippedSubjectMismatch: 0,
     processed: 0,
     skippedAlreadyProcessed: 0,
     failed: 0,
@@ -39,13 +41,23 @@ function forwardLabeledGmailPostsToGitHub() {
   );
 
   threads.forEach((thread) => {
-    if (thread.hasLabel(processedLabel)) {
+    if (threadHasLabel_(thread, processedLabel)) {
       stats.skippedAlreadyProcessed += 1;
       return;
     }
 
     const message = thread.getMessages().pop();
     const subject = message ? message.getSubject() : '(no subject)';
+
+    if (!subjectContainsRequiredMarker_(subject, config.subjectMustContain)) {
+      stats.skippedSubjectMismatch += 1;
+      Logger.log(
+        '[gmail-forwarder] Skipped subject mismatch subject="%s" requiredContains="%s"',
+        subject,
+        config.subjectMustContain
+      );
+      return;
+    }
 
     try {
       const payload = buildRepositoryDispatchPayload_(message, config);
@@ -79,14 +91,21 @@ function forwardLabeledGmailPostsToGitHub() {
   const endedAt = new Date();
   const durationMs = endedAt.getTime() - startedAt.getTime();
   Logger.log(
-    '[gmail-forwarder] Run finished at %s. processed=%s skippedAlreadyProcessed=%s failed=%s attachmentsForwarded=%s durationMs=%s',
+    '[gmail-forwarder] Run finished at %s. processed=%s skippedAlreadyProcessed=%s skippedSubjectMismatch=%s failed=%s attachmentsForwarded=%s durationMs=%s',
     endedAt.toISOString(),
     stats.processed,
     stats.skippedAlreadyProcessed,
+    stats.skippedSubjectMismatch,
     stats.failed,
     stats.attachmentsForwarded,
     durationMs
   );
+}
+
+function subjectContainsRequiredMarker_(subject, marker) {
+  const required = String(marker || '').trim().toLowerCase();
+  if (!required) return true;
+  return String(subject || '').toLowerCase().indexOf(required) >= 0;
 }
 
 function buildRepositoryDispatchPayload_(message, config) {
@@ -119,6 +138,12 @@ function buildRepositoryDispatchPayload_(message, config) {
 
 function sendRepositoryDispatch_(payload, githubToken, config) {
   const url = `https://api.github.com/repos/${config.githubOwner}/${config.githubRepo}/dispatches`;
+  const requestBody = JSON.stringify(payload);
+
+  Logger.log('[gmail-forwarder] Dispatch request url=%s', url);
+  Logger.log('[gmail-forwarder] Dispatch request auth=Bearer ***redacted*** tokenLength=%s', String(githubToken || '').length);
+  Logger.log('[gmail-forwarder] Dispatch request payload=%s', requestBody);
+
   const response = UrlFetchApp.fetch(url, {
     method: 'post',
     muteHttpExceptions: true,
@@ -127,12 +152,15 @@ function sendRepositoryDispatch_(payload, githubToken, config) {
       Authorization: `Bearer ${githubToken}`,
       Accept: 'application/vnd.github+json',
     },
-    payload: JSON.stringify(payload),
+    payload: requestBody,
   });
 
   const status = response.getResponseCode();
+  const responseText = response.getContentText();
+  Logger.log('[gmail-forwarder] Dispatch response status=%s body=%s', status, responseText);
+
   if (status < 200 || status >= 300) {
-    throw new Error(`GitHub dispatch failed (${status}): ${response.getContentText()}`);
+    throw new Error(`GitHub dispatch failed (${status}): ${responseText}`);
   }
 }
 
@@ -171,6 +199,11 @@ function stripHtml_(html) {
 function getOrCreateLabel_(name) {
   const existing = GmailApp.getUserLabelByName(name);
   return existing || GmailApp.createLabel(name);
+}
+
+function threadHasLabel_(thread, label) {
+  const labelName = label.getName();
+  return thread.getLabels().some((item) => item.getName() === labelName);
 }
 
 function testForwardLatestMatchingEmail() {
